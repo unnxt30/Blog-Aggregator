@@ -40,6 +40,7 @@ func main(){
 	mux.HandleFunc("GET /v1/healthz", GetHealthz);
 	mux.HandleFunc("GET /v1/err", GetErr);
 	mux.HandleFunc("POST /v1/users", myConfig.HandleUserFunc);
+	mux.HandleFunc("GET /v1/users", myConfig.GetUser);
 
 	server.Addr = fmt.Sprintf(":%v", portNumber)
 	server.Handler = mux;
