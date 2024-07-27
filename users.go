@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,19 +15,21 @@ type UsrStruct struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 	Name string `json:"name"`
+	ApiKey string `json:"api_key"`
 
 }
 
-// func dbUsertoUsrStruct(dbUser database.CreateUserParams) UsrStruct{
+func dbUsertoUsrStruct(dbUser database.User) UsrStruct{
 
-// 	return UsrStruct{
-// 		ID: dbUser.ID,
-// 		CreatedAt: dbUser.CreatedAt,
-// 		UpdatedAt: dbUser.UpdatedAt,
-// 		Name: dbUser.Name.String,
-// 	}
+	return UsrStruct{
+		ID: dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Name: dbUser.Name.String,
+		ApiKey: dbUser.ApiKey,
+	}
 
-// }
+}
 
 func (cfg *apiConfig)HandleUserFunc(w http.ResponseWriter, r *http.Request){
 	type UserRequest struct{
@@ -54,24 +55,13 @@ func (cfg *apiConfig)HandleUserFunc(w http.ResponseWriter, r *http.Request){
 		respondWithError(w, 501, "error creating a user");
 	}
 
-	respondWithJSON(w, 200, createdUser);
-	};
+	respondWithJSON(w, 200, dbUsertoUsrStruct(createdUser));
 
-func (cfg *apiConfig)GetUser(w http.ResponseWriter, r *http.Request){
+};
+
+func (cfg *apiConfig)GetUser(w http.ResponseWriter, r *http.Request, User database.User){
 	
-	header := r.Header.Get("Authorization: ");
-	headerArgs := strings.TrimPrefix(header, "ApiKey");
-	if len(headerArgs) < 2{
-		respondWithError(w, 401, "Invalid Header");
-	}
-
-	returnUser, err := cfg.DB.GetUserByApiKey(r.Context(), headerArgs);
-	
-	if err != nil{
-		respondWithError(w, 400, "Bad Request")
-	}
-
-	respondWithJSON(w, 200, returnUser);
+	respondWithJSON(w, 200, User);
 
 }
 	
