@@ -59,4 +59,15 @@ func (cfg *apiConfig) PostFeed(w http.ResponseWriter, r *http.Request, usr datab
 		
 }
 
+func (cfg *apiConfig) GetAllFeed(w http.ResponseWriter, r *http.Request){
+	feeds, err := cfg.DB.GetFeed(r.Context());
+
+	if err != nil{
+		respondWithError(w, 400, "Could not get feed");
+	}
+
+	respondWithJSON(w, 200, feeds);
+
+}
+
 
