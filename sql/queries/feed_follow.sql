@@ -6,3 +6,6 @@ RETURNING *;
 -- name: DeleteFeedfollow :exec
 Delete from feed_follow 
 where feed_follow_id = $1;
+
+-- name: UserFeedFollows :many
+select * from feed_follow where user_id = $1;

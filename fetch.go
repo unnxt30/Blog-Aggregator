@@ -142,3 +142,30 @@ func (cfg *apiConfig) FetchFeeds(){
 		}
 	}
 }
+
+
+func(cfg *apiConfig) GetPostsByApiKey(w http.ResponseWriter, r *http.Request, usr database.User){
+	
+
+	UserFeeds, err := cfg.DB.UserFeedFollows(r.Context(), usr.ID);
+
+	if err != nil {
+		respondWithError(w, 401, "Could not fetch user feeds");
+		return;
+	}
+
+	var posts [][]database.Post
+
+	for _, usrFeed := range UserFeeds{
+		currPosts, err := cfg.DB.GetUserPost(r.Context(), database.GetUserPostParams{FeedID: usrFeed.FeedID, Limit: 2})
+		if (err != nil){
+			respondWithError(w, 401, "couldnt get user posts")
+			return;
+		}
+		posts = append(posts, currPosts);
+	}
+
+
+	respondWithJSON(w, 200, posts);
+
+}

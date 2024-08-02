@@ -48,6 +48,7 @@ func main(){
 	mux.HandleFunc("GET /v1/feed", myConfig.GetAllFeed);
 	mux.HandleFunc("POST /v1/feed_follows", myConfig.middlewareAuth(myConfig.CreateFeedfollow));
 	mux.HandleFunc("DELETE /v1/feed_follows/{unfollowID}", myConfig.RemoveFeedfollow);
+	mux.HandleFunc("GET /v1/posts", myConfig.middlewareAuth(myConfig.GetPostsByApiKey));
 	server.Addr = fmt.Sprintf(":%v", portNumber)
 	server.Handler = mux;
 

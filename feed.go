@@ -72,7 +72,7 @@ func (cfg *apiConfig) PostFeed(w http.ResponseWriter, r *http.Request, usr datab
 		respondWithError(w, 400, "could not follow feed")
 		return;
 	}
-	respondWithJSON(w, 200, map[string]interface{}{"feed": simplifyFeedParam(returnFeed), "feed_id": FeedFollow});
+	respondWithJSON(w, 200, map[string]interface{}{"feed": simplifyFeedParam(returnFeed), "feed_follow": FeedFollow});
 
 
 		
