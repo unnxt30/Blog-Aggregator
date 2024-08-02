@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -9,8 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/unnxt30/Blog-Aggregator/internal/database"
 )
+
+const layout = "Mon, 02 Jan 2006 15:04:06 -0700";
 
 type Rss struct {
 	XMLName xml.Name `xml:"rss"`
@@ -42,7 +46,8 @@ type Rss struct {
 } 
 
 func (cfg *apiConfig) feedWorker(ctx context.Context){
-	feedArr, err := cfg.DB.GetNextFeedsToFetch(ctx, 10)
+	
+	feedArr, err := cfg.DB.GetNextFeedsToFetch(ctx, 1)
 	if err != nil {
 		// Handle error fetching feeds
 		fmt.Println("Error fetching feeds:", err)
@@ -52,31 +57,44 @@ func (cfg *apiConfig) feedWorker(ctx context.Context){
 	var wg sync.WaitGroup
 
 	for _, feed := range feedArr {
-		// Mark feed as fetched before processing
 		err = cfg.DB.MarkFeedFetched(ctx, feed.FeedID)
 		if err != nil {
-			// Handle error marking feed as fetched
 			fmt.Println("Error marking feed as fetched:", err)
-			continue // Skip this feed and proceed
+			continue
 		}
 	}
 
 	for _, feed := range feedArr {
 		wg.Add(1)
 
-		// Capture feed for each goroutine
 		go func(feed database.Feed) {
 			defer wg.Done()
-
+			
 			feedData := FetchFeedData(string(feed.Url.String))
 			
 			for _, item := range feedData.Channel.Item {
-				// Additional logging
-				fmt.Println("Fetched title:", item.Title)
-			}
-		}(feed) // Passing feed as an argument to capture its value
-	}
+				parsedTime, err := time.Parse(layout, item.PubDate)
+				cfg.DB.CreatePost(ctx, database.CreatePostParams{
+					ID: uuid.New(),
+					CreatedAt: time.Now().Local().UTC(),
+					UpdatedAt: time.Now().Local().UTC(),
+					Title: item.Title,
+					Url: item.Link,
+					PublishedAt: sql.NullTime{Time: parsedTime, Valid: true},
+					FeedID: feed.FeedID,
+				});
+				
 
+
+				if err != nil {
+					fmt.Println(err)
+					continue;
+				}
+
+				fmt.Println("Fetched title date:", parsedTime);
+			}
+		}(feed) 
+	}
 	wg.Wait()
 }
 
@@ -87,7 +105,7 @@ func FetchFeedData(url string) Rss {
 		fmt.Println(error.Error(err))
 		return Rss{}
 	}
-	defer resp.Body.Close() // Ensures body closes even if there's a read/unmarshal error
+	defer resp.Body.Close() 
 
 	xmlData := Rss{}
 	body, err := io.ReadAll(resp.Body)
@@ -97,7 +115,7 @@ func FetchFeedData(url string) Rss {
 		return Rss{}
 	}
 
-	err = xml.Unmarshal(body, &xmlData) // Unmarshalling directly from body
+	err = xml.Unmarshal(body, &xmlData) 
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -107,25 +125,20 @@ func FetchFeedData(url string) Rss {
 
 func (cfg *apiConfig) FetchFeeds(){
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel() // Ensure context cancellation when main exits
+	defer cancel() 
 
-	// Create a ticker that ticks every 60 seconds
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
-	// Run the worker initially before starting the ticker
 	go cfg.feedWorker(ctx)
-
-	// Start a loop that will call feedWorker every 60 seconds
+	
 	for {
 		select {
 		case <-ticker.C:
 			go cfg.feedWorker(ctx)
-		// Handle context cancellation
 		case <-ctx.Done():
 			fmt.Println("Context cancelled, stopping the worker")
 			return
 		}
-}
-
+	}
 }

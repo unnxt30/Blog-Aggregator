@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -20,7 +22,7 @@ type apiConfig struct {
 
 func main(){
 	godotenv.Load();
-	// portNumber := os.Getenv("PORT")
+	portNumber := os.Getenv("PORT")
 	connectionString := os.Getenv("CONN_STRING");
 
 	db, err := sql.Open("postgres", connectionString);
@@ -33,21 +35,23 @@ func main(){
 	var myConfig apiConfig;
 	myConfig.DB = dbQueries	;
 
-	// mux := http.NewServeMux()
-	// var server http.Server
+	go myConfig.FetchFeeds();
 
-	// mux.HandleFunc("GET /v1/healthz", GetHealthz);
-	// mux.HandleFunc("GET /v1/err", GetErr);
-	// mux.HandleFunc("POST /v1/users", myConfig.HandleUserFunc);
-	// mux.HandleFunc("GET /v1/users", myConfig.middlewareAuth(myConfig.GetUser));
-	// mux.HandleFunc("POST /v1/feed", myConfig.middlewareAuth(myConfig.PostFeed));
-	// mux.HandleFunc("GET /v1/feed", myConfig.GetAllFeed);
-	// mux.HandleFunc("POST /v1/feed_follows", myConfig.middlewareAuth(myConfig.CreateFeedfollow));
-	// mux.HandleFunc("DELETE /v1/feed_follows/{unfollowID}", myConfig.RemoveFeedfollow);
-	// server.Addr = fmt.Sprintf(":%v", portNumber)
-	// server.Handler = mux;
+	mux := http.NewServeMux()
+	var server http.Server
 
-	// server.ListenAndServe();
+	mux.HandleFunc("GET /v1/healthz", GetHealthz);
+	mux.HandleFunc("GET /v1/err", GetErr);
+	mux.HandleFunc("POST /v1/users", myConfig.HandleUserFunc);
+	mux.HandleFunc("GET /v1/users", myConfig.middlewareAuth(myConfig.GetUser));
+	mux.HandleFunc("POST /v1/feed", myConfig.middlewareAuth(myConfig.PostFeed));
+	mux.HandleFunc("GET /v1/feed", myConfig.GetAllFeed);
+	mux.HandleFunc("POST /v1/feed_follows", myConfig.middlewareAuth(myConfig.CreateFeedfollow));
+	mux.HandleFunc("DELETE /v1/feed_follows/{unfollowID}", myConfig.RemoveFeedfollow);
+	server.Addr = fmt.Sprintf(":%v", portNumber)
+	server.Handler = mux;
+
+	server.ListenAndServe();
 
 	
 }
